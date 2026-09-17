@@ -17,13 +17,14 @@ Version=9.85
 Sub Class_Globals
 	Private xui As XUI
 	Private Root As B4XView
+	'Private smiley As Bitmap
 	Private kvs As KeyValueStore
-	Private ps As PhoneSensors
+	'Private ps As PhoneSensors
 	Private lblSteps As B4XView
 	'Private initialSteps As Int = -1
 	'Private currentSessionSteps As Int = 0
-	Private const KEY_DAY_START As String = "day_start_steps"
-	Private const KEY_LAST_DATE As String = "last_saved_date"
+	'Private const KEY_DAY_START As String = "day_start_steps"
+	'Private const KEY_LAST_DATE As String = "last_saved_date"
 End Sub
 
 Public Sub Initialize
@@ -37,24 +38,37 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 	Root = Root1
 	Root.LoadLayout("MainPage")
 	B4XPages.SetTitle(Me, "MySteps")
+	'smiley = LoadBitmapResize(File.DirAssets, "smiley.png", 24dip, 24dip, False)
+	
 	'Step Counter vs. Step Detector:
 	'TYPE_STEP_COUNTER (19) returns total steps since last boot And Is Power-efficient.
 	'TYPE_STEP_DETECTOR (18) fires an event on every single Step taken (higher Power draw).
 
+	'StepService handles the PhoneSensors listener independently.
 	' TYPE_STEP_COUNTER = 19
-	ps.Initialize(19)
+	'ps.Initialize(19)
     
-	CheckAndStartSensor
+	'CheckAndStartSensor
+	' Start StepService instead of listening directly on the activity
+	CheckAndStartStepService
+	
+	Wait For (CheckAndRequestNotificationPermission) Complete (HasPermission As Boolean)
+	If HasPermission Then
+		'CallSub(Me, "Simple_Notification")
+	Else
+		ToastMessageShow("No permission to show notification", True)
+	End If
 End Sub
 
 'Called whenever the page becomes visible. Note that in B4J the Appear and Disappear events are only raised when the page is opened and closed. Not when the focus changes to a different window.
 Private Sub B4XPage_Appear
-	
+	Dim stepsToday As Int = kvs.GetDefault("steps_today", 0)
+	lblSteps.Text = "Steps Today: " & stepsToday
 End Sub
 
 'Called whenever a visible page disappear.
 Private Sub B4XPage_Disappear
-	ps.StopListening
+	'ps.StopListening
 End Sub
 
 #If B4A
@@ -72,6 +86,12 @@ Private Sub B4XPage_KeyPress (KeyCode As Int) As Boolean 'ignore
 End Sub
 #End If
 
+'Sub Simple_Notification
+'	Dim n As NB6
+'	n.Initialize("default", Application.LabelName, "DEFAULT").AutoCancel(True).SmallIcon(smiley)
+'	n.Build("Title", "Content", "tag1", Main).Notify(4) 'It will be Main (or any other activity) instead of Me if called from a service.
+'End Sub
+
 'Private Sub CheckAndStartSensor
 '    Dim rp As RuntimePermissions
 '    rp.CheckAndRequest(rp.PERMISSION_ACTIVITY_RECOGNITION)
@@ -86,21 +106,21 @@ End Sub
 '	End If
 'End Sub
 
-Private Sub CheckAndStartSensor
-    Dim rp As RuntimePermissions
-    
-    ' Pass the explicit permission string directly
-    rp.CheckAndRequest("android.permission.ACTIVITY_RECOGNITION")
-    Wait For B4XPage_PermissionResult (Permission As String, Result As Boolean)
-    
-    If Result Then
-        If ps.StartListening("Sensor") = False Then
-            Log("Step counter sensor not available on this device.")
-        End If
-    Else
-        Log("Activity Recognition permission denied.")
-    End If
-End Sub
+'Private Sub CheckAndStartSensor
+'    Dim rp As RuntimePermissions
+'    
+'    ' Pass the explicit permission string directly
+'    rp.CheckAndRequest("android.permission.ACTIVITY_RECOGNITION")
+'    Wait For B4XPage_PermissionResult (Permission As String, Result As Boolean)
+'    
+'    If Result Then
+'        If ps.StartListening("Sensor") = False Then
+'            Log("Step counter sensor not available on this device.")
+'        End If
+'    Else
+'        Log("Activity Recognition permission denied.")
+'    End If
+'End Sub
 
 'Private Sub Sensor_SensorChanged (Values() As Float)
 '    ' TYPE_STEP_COUNTER returns total steps since device reboot
@@ -114,28 +134,62 @@ End Sub
 '    lblSteps.Text = "Steps Today: " & currentSessionSteps
 'End Sub
 
-Private Sub Sensor_SensorChanged (Values() As Float)
-    Dim totalStepsSinceReboot As Int = Values(0)
-    Dim todayDate As String = DateTime.Date(DateTime.Now)
+'Private Sub Sensor_SensorChanged (Values() As Float)
+'    Dim totalStepsSinceReboot As Int = Values(0)
+'    Dim todayDate As String = DateTime.Date(DateTime.Now)
+'    
+'    Dim lastSavedDate As String = kvs.GetDefault(KEY_LAST_DATE, "")
+'    Dim dayStartSteps As Int = kvs.GetDefault(KEY_DAY_START, -1)
+'    
+'    ' 1. Handle Midnight Reset or First Run
+'    If todayDate <> lastSavedDate Or dayStartSteps = -1 Then
+'        dayStartSteps = totalStepsSinceReboot
+'        kvs.Put(KEY_DAY_START, dayStartSteps)
+'        kvs.Put(KEY_LAST_DATE, todayDate)
+'    End If
+'    
+'    ' 2. Handle Device Reboot (Sensor value dropped below baseline)
+'    If totalStepsSinceReboot < dayStartSteps Then
+'        dayStartSteps = 0
+'        kvs.Put(KEY_DAY_START, dayStartSteps)
+'    End If
+'    
+'    ' 3. Calculate actual steps taken today
+'    Dim stepsToday As Int = totalStepsSinceReboot - dayStartSteps
+'    Log("Steps Today: " & stepsToday)
+'	lblSteps.Text = "Steps Today: " & stepsToday
+'End Sub
+
+Private Sub CheckAndStartStepService
+	Dim rp As RuntimePermissions
+	rp.CheckAndRequest("android.permission.ACTIVITY_RECOGNITION")
+	Wait For B4XPage_PermissionResult (Permission As String, Result As Boolean)
     
-    Dim lastSavedDate As String = kvs.GetDefault(KEY_LAST_DATE, "")
-    Dim dayStartSteps As Int = kvs.GetDefault(KEY_DAY_START, -1)
-    
-    ' 1. Handle Midnight Reset or First Run
-    If todayDate <> lastSavedDate Or dayStartSteps = -1 Then
-        dayStartSteps = totalStepsSinceReboot
-        kvs.Put(KEY_DAY_START, dayStartSteps)
-        kvs.Put(KEY_LAST_DATE, todayDate)
-    End If
-    
-    ' 2. Handle Device Reboot (Sensor value dropped below baseline)
-    If totalStepsSinceReboot < dayStartSteps Then
-        dayStartSteps = 0
-        kvs.Put(KEY_DAY_START, dayStartSteps)
-    End If
-    
-    ' 3. Calculate actual steps taken today
-    Dim stepsToday As Int = totalStepsSinceReboot - dayStartSteps
-    Log("Steps Today: " & stepsToday)
-	lblSteps.Text = "Steps Today: " & stepsToday
+	If Result Then
+		' Start the foreground service
+		StartService(StepService)
+	Else
+		Log("Permission denied. Step tracking disabled.")
+	End If
+End Sub
+
+' Called from StepService when new steps are logged
+Public Sub UpdateStepDisplay (steps As Int)
+	lblSteps.Text = "Steps Today: " & steps
+End Sub
+
+Private Sub CheckAndRequestNotificationPermission As ResumableSub
+	Dim p As Phone
+	If p.SdkVersion < 33 Then Return True
+	Dim ctxt As JavaObject
+	ctxt.InitializeContext
+	Dim targetSdkVersion As Int = ctxt.RunMethodJO("getApplicationInfo", Null).GetField("targetSdkVersion")
+	If targetSdkVersion < 33 Then Return True
+	Dim NotificationsManager As JavaObject = ctxt.RunMethod("getSystemService", Array("notification"))
+	Dim NotificationsEnabled As Boolean = NotificationsManager.RunMethod("areNotificationsEnabled", Null)
+	If NotificationsEnabled Then Return True
+	Dim rp As RuntimePermissions
+	rp.CheckAndRequest(rp.PERMISSION_POST_NOTIFICATIONS)
+	Wait For B4XPage_PermissionResult (Permission As String, Result As Boolean) 'change to Activity_PermissionResult if non-B4XPages.
+	Return Result
 End Sub
