@@ -34,7 +34,7 @@ Version=14
 	'SupportedOrientations possible values: unspecified, landscape or portrait.
 	#SupportedOrientations: portrait
 	#CanInstallToExternalStorage: False
-	#BridgeLogger: True
+	'#BridgeLogger: True
 #End Region
 
 #Region  Activity Attributes
