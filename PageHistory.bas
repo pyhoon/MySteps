@@ -59,7 +59,7 @@ Public Sub RenderHistoryView
 	lblStats.Text = sb.ToString
     
 	' 3. Draw chart on layout panel
-	DrawWeeklyChart
+	DrawWeeklyChart(pnlChart, B4XPages.MainPage.dailyTarget)
 End Sub
 
 ' Returns a Map with summary stats for the last N days
@@ -145,88 +145,189 @@ End Sub
 '	cvsChart.Invalidate
 'End Sub
 
-Public Sub DrawWeeklyChart
-    Dim cvsChart As B4XCanvas
-	cvsChart.Initialize(pnlChart)
-    cvsChart.ClearRect(cvsChart.TargetRect)
+'Public Sub DrawWeeklyChart
+'    Dim cvsChart As B4XCanvas
+'	cvsChart.Initialize(pnlChart)
+'    cvsChart.ClearRect(cvsChart.TargetRect)
+'    
+'    ' 1. Draw Optional Background & Border
+'    Dim rectChart As B4XRect
+'	rectChart.Initialize(0, 0, pnlChart.Width, pnlChart.Height)
+'    cvsChart.DrawRect(rectChart, xui.Color_RGB(250, 250, 250), True, 0)
+'    cvsChart.DrawRect(rectChart, xui.Color_RGB(220, 220, 220), False, 1dip)
+'    
+'    Dim history As Map = kvs.GetDefault("step_history", CreateMap())
+'    
+'    ' Dimensions and Layout Padding
+'    Dim topPadding As Float = 25dip    ' Space for step count text above bars
+'    Dim bottomPadding As Float = 35dip ' Space for date text below bars
+'	Dim barWidth As Float = (pnlChart.Width - 30dip) / 7
+'	Dim maxHeight As Float = pnlChart.Height - topPadding - bottomPadding
+'	Dim baselineY As Float = pnlChart.Height - bottomPadding
+'    
+'    ' Fonts for Chart Text
+'    Dim fntLabel As B4XFont = xui.CreateDefaultFont(10)
+'    Dim fntValue As B4XFont = xui.CreateDefaultBoldFont(10)
+'    
+'    ' Save current DateFormat and temporarily switch to dd/MM
+'    Dim originalDateFormat As String = DateTime.DateFormat
+'    DateTime.DateFormat = "dd/MM"
+'    
+'	Dim mainPage As B4XMainPage = B4XPages.MainPage
+'	Dim dailyTarget As Int = mainPage.dailyTarget
+'	
+'    Dim pd As Period
+'    For i = 6 To 0 Step -1
+'        pd.Days = -i
+'        
+'        ' Format Date for Label (dd/MM)
+'        Dim dateLabel As String = DateTime.Date(DateUtils.AddPeriod(DateTime.Now, pd))
+'        Dim tickDate As String = DateTime.Date(DateUtils.AddPeriod(DateTime.Now, pd)) ' Standard lookup date
+'        
+'        Dim daySteps As Int = history.GetDefault(tickDate, 0)
+'        
+'        ' Check if day is today to read live session steps
+'        If i = 0 Then
+'            Dim m As Map = GetSettings
+'            daySteps = m.GetDefault("steps_today", 0)
+'        End If
+'        
+'        ' Calculate Bar Height relative to target
+'        Dim barHeight As Float = (daySteps / (dailyTarget * 1.2)) * maxHeight
+'        If barHeight > maxHeight Then barHeight = maxHeight
+'        If barHeight < 4dip And daySteps > 0 Then barHeight = 4dip ' Minimum bar visibility
+'        
+'        Dim centerX As Float = 15dip + (6 - i) * barWidth + (barWidth / 2)
+'        Dim topY As Float = baselineY - barHeight
+'        
+'        ' Bar Color Logic (Green if target met, Blue if under)
+'        Dim barColor As Int = xui.Color_RGB(56, 184, 255)
+'        If daySteps >= dailyTarget Then barColor = xui.Color_RGB(76, 175, 80)
+'        
+'        ' Draw Bar Line
+'        If daySteps > 0 Then
+'            cvsChart.DrawLine(centerX, baselineY, centerX, topY, barColor, barWidth - 8dip)
+'        End If
+'        
+'        ' 2. Draw Date Text Below Bar
+'		cvsChart.DrawText(dateLabel, centerX, pnlChart.Height - 12dip, fntLabel, xui.Color_RGB(100, 100, 100), "CENTER")
+'        
+'        ' 3. Draw Total Steps Count Above Bar (Only if steps > 0)
+'        If daySteps > 0 Then
+'            Dim stepText As String
+'            If daySteps >= 10000 Then
+'                stepText = NumberFormat(daySteps / 1000, 0, 1) & "k" ' Compact format (e.g. 10.5k)
+'            Else
+'                stepText = NumberFormat(daySteps, 0, 0)
+'            End If
+'            
+'            cvsChart.DrawText(stepText, centerX, topY - 5dip, fntValue, xui.Color_RGB(50, 50, 50), "CENTER")
+'        End If
+'    Next
+'    
+'    ' Restore original DateFormat
+'    DateTime.DateFormat = originalDateFormat
+'    
+'    cvsChart.Invalidate
+'End Sub
+
+Public Sub DrawWeeklyChart (pnlCanvas As B4XView, dailyTarget As Int)
+	Dim cvsChart As B4XCanvas
+	cvsChart.Initialize(pnlCanvas)
+	cvsChart.ClearRect(cvsChart.TargetRect)
     
-    ' 1. Draw Optional Background & Border
-    Dim rectChart As B4XRect
-	rectChart.Initialize(0, 0, pnlChart.Width, pnlChart.Height)
-    cvsChart.DrawRect(rectChart, xui.Color_RGB(250, 250, 250), True, 0)
-    cvsChart.DrawRect(rectChart, xui.Color_RGB(220, 220, 220), False, 1dip)
+	' 1. Draw Background & Border
+	Dim rectChart As B4XRect
+	rectChart.Initialize(0, 0, pnlCanvas.Width, pnlCanvas.Height)
+	cvsChart.DrawRect(rectChart, xui.Color_RGB(250, 250, 250), True, 0)
+	cvsChart.DrawRect(rectChart, xui.Color_RGB(220, 220, 220), False, 1dip)
     
-    Dim history As Map = kvs.GetDefault("step_history", CreateMap())
+	Dim history As Map = kvs.GetDefault("step_history", CreateMap())
     
-    ' Dimensions and Layout Padding
-    Dim topPadding As Float = 25dip    ' Space for step count text above bars
-    Dim bottomPadding As Float = 35dip ' Space for date text below bars
-	Dim barWidth As Float = (pnlChart.Width - 30dip) / 7
-	Dim maxHeight As Float = pnlChart.Height - topPadding - bottomPadding
-	Dim baselineY As Float = pnlChart.Height - bottomPadding
+	' Layout Padding
+	Dim topPadding As Float = 25dip    ' Space for step count text above bars
+	Dim bottomPadding As Float = 48dip ' Expanded space for two-line bottom text
+	Dim barWidth As Float = (pnlCanvas.Width - 30dip) / 7
+	Dim maxHeight As Float = pnlCanvas.Height - topPadding - bottomPadding
+	Dim baselineY As Float = pnlCanvas.Height - bottomPadding
     
-    ' Fonts for Chart Text
-    Dim fntLabel As B4XFont = xui.CreateDefaultFont(10)
-    Dim fntValue As B4XFont = xui.CreateDefaultBoldFont(10)
+	' Chart Fonts
+	Dim fntLabel As B4XFont = xui.CreateDefaultFont(9)
+	Dim fntDayLabel As B4XFont = xui.CreateDefaultBoldFont(9)
+	Dim fntValue As B4XFont = xui.CreateDefaultBoldFont(10)
     
-    ' Save current DateFormat and temporarily switch to dd/MM
-    Dim originalDateFormat As String = DateTime.DateFormat
-    DateTime.DateFormat = "dd/MM"
+	' Day Names Lookup Array (1 = Sunday, 7 = Saturday)
+	Dim dayNames() As String = Array As String("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
     
-	Dim mainPage As B4XMainPage = B4XPages.MainPage
-	Dim dailyTarget As Int = mainPage.dailyTarget
-	
-    Dim pd As Period
-    For i = 6 To 0 Step -1
-        pd.Days = -i
+	' Temporary Date Format
+	Dim originalDateFormat As String = DateTime.DateFormat
+	DateTime.DateFormat = "dd/MM"
+    
+	Dim pd As Period
+	For i = 6 To 0 Step -1
+		pd.Days = -i
         
-        ' Format Date for Label (dd/MM)
-        Dim dateLabel As String = DateTime.Date(DateUtils.AddPeriod(DateTime.Now, pd))
-        Dim tickDate As String = DateTime.Date(DateUtils.AddPeriod(DateTime.Now, pd)) ' Standard lookup date
+		Dim targetTicks As Long = DateUtils.AddPeriod(DateTime.Now, pd)
+		Dim dateLabel As String = DateTime.Date(targetTicks)
+		Dim tickDate As String = DateTime.Date(targetTicks)
         
-        Dim daySteps As Int = history.GetDefault(tickDate, 0)
+		' Determine Day of Week & Weekend Status
+		Dim dayOfWeek As Int = DateTime.GetDayOfWeek(targetTicks) ' 1 = Sun, 7 = Sat
+		Dim dayName As String = dayNames(dayOfWeek - 1)
+		Dim isWeekend As Boolean = (dayOfWeek = 1 Or dayOfWeek = 7)
         
-        ' Check if day is today to read live session steps
-        If i = 0 Then
-            Dim m As Map = GetSettings
-            daySteps = m.GetDefault("steps_today", 0)
-        End If
+		Dim daySteps As Int = history.GetDefault(tickDate, 0)
         
-        ' Calculate Bar Height relative to target
-        Dim barHeight As Float = (daySteps / (dailyTarget * 1.2)) * maxHeight
-        If barHeight > maxHeight Then barHeight = maxHeight
-        If barHeight < 4dip And daySteps > 0 Then barHeight = 4dip ' Minimum bar visibility
+		' Fetch live steps if day is today
+		If i = 0 Then
+			Dim m As Map = GetSettings
+			daySteps = m.GetDefault("steps_today", 0)
+		End If
         
-        Dim centerX As Float = 15dip + (6 - i) * barWidth + (barWidth / 2)
-        Dim topY As Float = baselineY - barHeight
+		' Calculate Bar Height
+		Dim barHeight As Float = (daySteps / (dailyTarget * 1.2)) * maxHeight
+		If barHeight > maxHeight Then barHeight = maxHeight
+		If barHeight < 4dip And daySteps > 0 Then barHeight = 4dip
         
-        ' Bar Color Logic (Green if target met, Blue if under)
-        Dim barColor As Int = xui.Color_RGB(56, 184, 255)
-        If daySteps >= dailyTarget Then barColor = xui.Color_RGB(76, 175, 80)
+		Dim centerX As Float = 15dip + (6 - i) * barWidth + (barWidth / 2)
+		Dim topY As Float = baselineY - barHeight
         
-        ' Draw Bar Line
-        If daySteps > 0 Then
-            cvsChart.DrawLine(centerX, baselineY, centerX, topY, barColor, barWidth - 8dip)
-        End If
+		' Bar Color (Green = Target Met, Blue = Target Pending)
+		Dim barColor As Int = xui.Color_RGB(56, 184, 255)
+		If daySteps >= dailyTarget Then barColor = xui.Color_RGB(76, 175, 80)
         
-        ' 2. Draw Date Text Below Bar
-		cvsChart.DrawText(dateLabel, centerX, pnlChart.Height - 12dip, fntLabel, xui.Color_RGB(100, 100, 100), "CENTER")
+		' Draw Step Bar
+		If daySteps > 0 Then
+			cvsChart.DrawLine(centerX, baselineY, centerX, topY, barColor, barWidth - 8dip)
+		End If
         
-        ' 3. Draw Total Steps Count Above Bar (Only if steps > 0)
-        If daySteps > 0 Then
-            Dim stepText As String
-            If daySteps >= 10000 Then
-                stepText = NumberFormat(daySteps / 1000, 0, 1) & "k" ' Compact format (e.g. 10.5k)
-            Else
-                stepText = NumberFormat(daySteps, 0, 0)
-            End If
+		' Text Color: Red for Weekends, Gray for Weekdays
+		Dim labelColor As Int
+		If isWeekend Then
+			labelColor = xui.Color_RGB(239, 68, 68) ' Red
+		Else
+			labelColor = xui.Color_RGB(100, 100, 100) ' Slate Gray
+		End If
+        
+		' 2. Draw Date (dd/MM)
+		cvsChart.DrawText(dateLabel, centerX, pnlCanvas.Height - 26dip, fntLabel, labelColor, "CENTER")
+        
+		' 3. Draw Day Name (e.g. Sat / Sun / Mon)
+		cvsChart.DrawText(dayName, centerX, pnlCanvas.Height - 10dip, fntDayLabel, labelColor, "CENTER")
+        
+		' 4. Draw Step Count Above Bar
+		If daySteps > 0 Then
+			Dim stepText As String
+			If daySteps >= 10000 Then
+				stepText = NumberFormat(daySteps / 1000, 0, 1) & "k"
+			Else
+				stepText = NumberFormat(daySteps, 0, 0)
+			End If
             
-            cvsChart.DrawText(stepText, centerX, topY - 5dip, fntValue, xui.Color_RGB(50, 50, 50), "CENTER")
-        End If
-    Next
+			cvsChart.DrawText(stepText, centerX, topY - 5dip, fntValue, xui.Color_RGB(50, 50, 50), "CENTER")
+		End If
+	Next
     
-    ' Restore original DateFormat
-    DateTime.DateFormat = originalDateFormat
-    
-    cvsChart.Invalidate
+	DateTime.DateFormat = originalDateFormat
+	cvsChart.Invalidate
 End Sub
