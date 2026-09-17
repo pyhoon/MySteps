@@ -21,9 +21,8 @@ Sub Class_Globals
 	Private lblSteps As B4XView
 	Private lblTarget As B4XView
 	Private lblDailyTarget As B4XView
-	Private ProgressBar1 As B4XProgressBar ' Requires XUI Views library
-	Private const KEY_DAILY_TARGET As String = "daily_target_steps"
-	Private const DEFAULT_TARGET As Int = 10000
+	Private btnOverrideSteps As Button
+	Private ProgressBar1 As B4XProgressBar
 	Private dailyTarget As Int
 End Sub
 
@@ -38,14 +37,16 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 	Root.LoadLayout("MainPage")
 	B4XPages.SetTitle(Me, "MySteps")
 	
-	' Load target setting (default to 10,000 steps)
-	dailyTarget = kvs.GetDefault(KEY_DAILY_TARGET, DEFAULT_TARGET)
+	' REMINDER: Don't cheat your wife! Remember to Hide this button!
+	'btnOverrideSteps.Visible = True
 	
-	' Force the daily target to 5 steps for testing
-	'SetDailyTarget(5) ' uncomment for testing
+	' Load target from central Map settings
+	Dim m As Map = GetSettings
+	dailyTarget = m.Get("target")
 
-	'kvs.Put("steps_today", 300) 'cheating?
-	
+	' Force the daily target for testing
+	SetDailyTarget(10000)
+
 	' Request both permissions back-to-back before starting the service
 	Wait For (RequestAllPermissions) Complete (Success As Boolean)
 	If Success Then
@@ -57,8 +58,9 @@ End Sub
 
 'Called whenever the page becomes visible. Note that in B4J the Appear and Disappear events are only raised when the page is opened and closed. Not when the focus changes to a different window.
 Private Sub B4XPage_Appear
-	' Refresh display on app focus
-	Dim stepsToday As Int = kvs.GetDefault("steps_today", 0)
+	' Load current steps from central Map settings
+	Dim m As Map = GetSettings
+	Dim stepsToday As Int = m.Get("steps_today")
 	UpdateStepDisplay(stepsToday)
 End Sub
 
@@ -95,18 +97,22 @@ Public Sub UpdateStepDisplay (steps As Int)
     
     ' Update target display label
     Dim pct As Int = Floor((steps / dailyTarget) * 100)
-    lblTarget.Text = steps & " / " & dailyTarget & " steps (" & pct & "%)"
+	lblTarget.Text = steps & " / " & NumberFormat(dailyTarget, 0, 0) & " steps (" & pct & "%)"
 End Sub
 
 Public Sub SetDailyTarget (newTarget As Int)
     dailyTarget = newTarget
-    kvs.Put(KEY_DAILY_TARGET, newTarget)
-    
+	
+	' Update target inside the Map and persist
+	Dim m As Map = GetSettings
+	m.Put("target", newTarget)
+	SaveSettings(m)
+
     If lblDailyTarget.IsInitialized Then
         lblDailyTarget.Text = "Daily target " & NumberFormat(newTarget, 0, 0) & " steps"
     End If
     
-    Dim stepsToday As Int = kvs.GetDefault("steps_today", 0)
+	Dim stepsToday As Int = m.Get("steps_today")
     UpdateStepDisplay(stepsToday)
 End Sub
 
@@ -133,4 +139,18 @@ Private Sub RequestAllPermissions As ResumableSub
 	End If
     
 	Return True
+End Sub
+
+' Load or initialize settings Map
+Private Sub GetSettings As Map
+	Return kvs.GetDefault("app_settings", CreateMap("target": 10000, "notified_date": "", "day_start": -1, "last_date": ""))
+End Sub
+
+Private Sub SaveSettings (m As Map)
+	kvs.Put("app_settings", m)
+End Sub
+
+' Set today's steps to 5 steps less than dailyTarget to test the goal notification
+Private Sub btnOverrideSteps_Click
+	CallSub2(StepService, "OverrideStepsToday", dailyTarget - 5)
 End Sub
