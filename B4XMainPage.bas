@@ -43,6 +43,8 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 	
 	' Force the daily target to 5 steps for testing
 	'SetDailyTarget(5) ' uncomment for testing
+
+	'kvs.Put("steps_today", 300) 'cheating?
 	
 	' Request both permissions back-to-back before starting the service
 	Wait For (RequestAllPermissions) Complete (Success As Boolean)
