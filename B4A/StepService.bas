@@ -34,19 +34,12 @@ End Sub
 
 Sub Service_Start (StartingIntent As Intent)
     ' 1. Start Foreground Service with Persistent Notification (Required on modern Android)
-	'Dim nb As NotificationBuilder ' Requires NB6 or NotificationBuilder library
-    'nb.Initialize
-    'nb.SmallIcon = "icon"
-    'nb.SetContentTitle("Step Counter Active")
-    'nb.SetContentText("Tracking steps in background...")
-	'nb.Ongoing = True
 	Dim nb As NB6 ' Requires NB6 or NotificationBuilder library
 	nb.Initialize("default", Application.LabelName, "DEFAULT").AutoCancel(True).SmallIcon(smiley)
 	'nb.Build("Title", "Content", "tag1", Me).Notify(4) 'It will be Main (or any other activity) instead of Me if called from a service.
 	nb.Build("Hi Aeric", "Keep walking!", "tag1", Main).Notify(4)
 	
     ' Set Service to Foreground
-    'Service.StartForeground(NOTIFICATION_ID, nb.Build)
 	Dim n As Notification = nb.Build("Step Counter", "Tracking steps in background...", "tag1", Main)
 	Service.StartForeground(NOTIFICATION_ID, n)
 	
@@ -116,43 +109,6 @@ Private Sub CheckAndNotifyGoalReached (stepsToday As Int, todayDate As String)
 		nGoal.Notify(2001) ' Separate notification ID from background service
 	End If
 End Sub
-
-'Private Sub Sensor_SensorChanged (Values() As Float)
-'    Dim totalStepsSinceReboot As Int = Values(0)
-'    Dim todayDate As String = DateTime.Date(DateTime.Now)
-'    
-'    Dim lastSavedDate As String = kvs.GetDefault(KEY_LAST_DATE, "")
-'    Dim dayStartSteps As Int = kvs.GetDefault(KEY_DAY_START, -1)
-'    
-'    ' Handle Midnight Reset or Initial Run
-'    If todayDate <> lastSavedDate Or dayStartSteps = -1 Then
-'        dayStartSteps = totalStepsSinceReboot
-'        kvs.Put(KEY_DAY_START, dayStartSteps)
-'        kvs.Put(KEY_LAST_DATE, todayDate)
-'    End If
-'    
-'    ' Handle Device Reboot (Sensor value lower than baseline)
-'    If totalStepsSinceReboot < dayStartSteps Then
-'        dayStartSteps = 0
-'        kvs.Put(KEY_DAY_START, dayStartSteps)
-'    End If
-'    
-'    ' Calculate & Save Steps Today
-'    Dim stepsToday As Int = totalStepsSinceReboot - dayStartSteps
-'    kvs.Put(KEY_STEPS_TODAY, stepsToday)
-'    
-'    ' Update UI via CallSub or B4XPages if app is active
-'    CallSubUtils_UpdateUI(stepsToday)
-'End Sub
-
-'Private Sub CallSubUtils_UpdateUI (steps As Int)
-'    ' Dynamically notify B4XMainPage if initialized
-'    #If B4XPAGE
-'    If B4XPages.IsInitialized And B4XPages.GetManager.IsForeground Then
-'        CallSub2(B4XPages.MainPage, "UpdateStepDisplay", steps)
-'    End If
-'    #End If
-'End Sub
 
 Private Sub CallSubUtils_UpdateUI (steps As Int)
 	If B4XPages.IsInitialized Then
