@@ -105,7 +105,7 @@ Private Sub ShowGoalNotification (target As Int)
     
 	Dim nGoal As Notification = nbGoal.Build( _
         "🎉 Goal Reached!", _
-        "Congratulations! You hit your goal of " & target & " steps today!", _
+        "Congratulations! You hit your goal of " & NumberFormat(target, 0, 0) & " steps today!", _
         "goal_tag", _
         Main)
         
@@ -122,7 +122,7 @@ End Sub
 
 ' Load or initialize settings Map
 Private Sub GetSettings As Map
-	Return kvs.GetDefault("app_settings", CreateMap("target": 10000, "notified_date": "", "day_start": -1, "last_date": ""))
+    Return kvs.GetDefault("app_settings", CreateMap("target": 10000, "notified_date": "", "day_start": -1, "last_date": "", "steps_today": 0))
 End Sub
 
 Private Sub SaveSettings (m As Map)
