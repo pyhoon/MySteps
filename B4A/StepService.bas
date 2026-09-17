@@ -13,13 +13,8 @@ Sub Process_Globals
     Private ps As PhoneSensors
     Private kvs As KeyValueStore
 	Private smiley As Bitmap
-    Private const KEY_DAY_START As String = "day_start_steps"
-    Private const KEY_LAST_DATE As String = "last_saved_date"
-    Private const KEY_STEPS_TODAY As String = "steps_today"
+	Private lastTotalSteps As Int = -1
     Private const NOTIFICATION_ID As Int = 1001
-	Private const KEY_DAILY_TARGET As String = "daily_target_steps"
-	Private const KEY_GOAL_NOTIFIED_DATE As String = "goal_notified_date"
-	Private const DEFAULT_TARGET As Int = 10000
 End Sub
 
 Sub Service_Create
@@ -57,57 +52,56 @@ Sub Service_Destroy
 End Sub
 
 Private Sub Sensor_SensorChanged (Values() As Float)
-	Dim totalStepsSinceReboot As Int = Values(0)
-	Dim todayDate As String = DateTime.Date(DateTime.Now)
+	lastTotalSteps = Values(0) ' Store latest hardware sensor reading
+    Dim todayDate As String = DateTime.Date(DateTime.Now)
+    Dim m As Map = GetSettings
     
-	Dim lastSavedDate As String = kvs.GetDefault(KEY_LAST_DATE, "")
-	Dim dayStartSteps As Int = kvs.GetDefault(KEY_DAY_START, -1)
+    Dim dayStart As Int = m.Get("day_start")
+    Dim lastDate As String = m.Get("last_date")
     
-	' 1. Handle Midnight Reset or Initial Run
-	If todayDate <> lastSavedDate Or dayStartSteps = -1 Then
-		dayStartSteps = totalStepsSinceReboot
-		kvs.Put(KEY_DAY_START, dayStartSteps)
-		kvs.Put(KEY_LAST_DATE, todayDate)
-	End If
+    ' Reset on midnight or initial run
+    If todayDate <> lastDate Or dayStart = -1 Then
+		dayStart = lastTotalSteps
+        m.Put("day_start", dayStart)
+        m.Put("last_date", todayDate)
+    End If
     
-	' 2. Handle Device Reboot
-	If totalStepsSinceReboot < dayStartSteps Then
-		dayStartSteps = 0
-		kvs.Put(KEY_DAY_START, dayStartSteps)
-	End If
+    ' Reset on device reboot
+	If lastTotalSteps < dayStart Then
+        dayStart = 0
+        m.Put("day_start", dayStart)
+    End If
     
-	' 3. Calculate & Save Steps
-	Dim stepsToday As Int = totalStepsSinceReboot - dayStartSteps
-	kvs.Put(KEY_STEPS_TODAY, stepsToday)
-    
-	' 4. Check for Daily Goal Achievement
-	CheckAndNotifyGoalReached(stepsToday, todayDate)
-    
-	' 5. Update UI if active
-	CallSubUtils_UpdateUI(stepsToday)
+	' Check for Daily Goal Achievement
+	Dim target As Int = m.Get("target")
+	Dim notifiedDate As String = m.Get("notified_date")
+	
+    ' Calculate & Save Steps
+	Dim stepsToday As Int = lastTotalSteps - dayStart
+    m.Put("steps_today", stepsToday)
+    SaveSettings(m)
+	
+    If stepsToday >= target And notifiedDate <> todayDate Then
+        m.Put("notified_date", todayDate)
+        SaveSettings(m)
+        ShowGoalNotification(target)
+    End If
+	
+    ' Update UI if active
+    CallSubUtils_UpdateUI(stepsToday)
 End Sub
 
-Private Sub CheckAndNotifyGoalReached (stepsToday As Int, todayDate As String)
-	Dim dailyTarget As Int = kvs.GetDefault(KEY_DAILY_TARGET, DEFAULT_TARGET)
-	Dim lastNotifiedDate As String = kvs.GetDefault(KEY_GOAL_NOTIFIED_DATE, "")
+Private Sub ShowGoalNotification (target As Int)
+	Dim nbGoal As NB6
+	nbGoal.Initialize("goal_channel", "Goal Achievements", "HIGH").SmallIcon(smiley)
     
-	' Trigger only if steps exceed target AND haven't notified today
-	If stepsToday >= dailyTarget And lastNotifiedDate <> todayDate Then
-		' Mark as notified for today
-		kvs.Put(KEY_GOAL_NOTIFIED_DATE, todayDate)
+	Dim nGoal As Notification = nbGoal.Build( _
+        "🎉 Goal Reached!", _
+        "Congratulations! You hit your goal of " & target & " steps today!", _
+        "goal_tag", _
+        Main)
         
-		' Show Goal Reached Notification using NB6
-		Dim nbGoal As NB6
-		nbGoal.Initialize("goal_channel", "Goal Achievements", "HIGH").SmallIcon(smiley)
-        
-		Dim nGoal As Notification = nbGoal.Build( _
-            "🎉 Goal Reached!", _
-            "Congratulations! You hit your goal of " & dailyTarget & " steps today!", _
-            "goal_tag", _
-            Main)
-            
-		nGoal.Notify(2001) ' Separate notification ID from background service
-	End If
+	nGoal.Notify(2001) ' Separate notification ID from foreground service
 End Sub
 
 Private Sub CallSubUtils_UpdateUI (steps As Int)
@@ -116,4 +110,42 @@ Private Sub CallSubUtils_UpdateUI (steps As Int)
 			CallSub2(B4XPages.MainPage, "UpdateStepDisplay", steps)
 		End If
 	End If
+End Sub
+
+' Load or initialize settings Map
+Private Sub GetSettings As Map
+	Return kvs.GetDefault("app_settings", CreateMap("target": 10000, "notified_date": "", "day_start": -1, "last_date": ""))
+End Sub
+
+Private Sub SaveSettings (m As Map)
+	kvs.Put("app_settings", m)
+End Sub
+
+' Call this to manually override today's step count
+Public Sub OverrideStepsToday (manualSteps As Int)
+    If lastTotalSteps = -1 Then 
+        Log("Sensor has not reported a reading yet.")
+		ToastMessageShow("Sensor has not reported a reading yet.", False)
+        Return
+    End If
+    
+    Dim m As Map = GetSettings
+	
+	' 1. Calculate adjusted baseline
+    Dim newDayStart As Int = lastTotalSteps - manualSteps
+	lastTotalSteps = newDayStart
+	Dim pd As Period : pd.Initialize
+	pd.Days = -1
+	Dim current As String = DateTime.Date(DateTime.Now)
+	Dim yesterday As String = DateTime.Date(DateUtils.AddPeriod(DateTime.Now, pd))
+    m.Put("day_start", newDayStart)
+	m.Put("last_date", current)
+	m.Put("notified_date", yesterday)
+    m.Put("steps_today", manualSteps)
+	
+	' 2. Persist updated settings
+    SaveSettings(m)
+    
+	' 3. Refresh UI
+    CallSubUtils_UpdateUI(manualSteps)
 End Sub
