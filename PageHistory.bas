@@ -63,7 +63,7 @@ Private Sub UpdateToggleUI
 End Sub
 
 Private Sub GetSettings As Map
-	Return kvs.GetDefault("app_settings", CreateMap("target": 10000, "notified_date": "", "day_start": -1, "last_date": ""))
+    Return kvs.GetDefault("app_settings", CreateMap("target": 10000, "notified_date": "", "day_start": -1, "last_date": "", "steps_today": 0))
 End Sub
 
 Public Sub RenderHistoryView
