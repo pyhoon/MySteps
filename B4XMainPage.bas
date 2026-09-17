@@ -21,7 +21,8 @@ Sub Class_Globals
 	Private lblSteps As B4XView
 	Private lblTarget As B4XView
 	Private lblDailyTarget As B4XView
-	Private btnOverrideSteps As Button
+	Private btnShowReport As B4XView
+	Private btnOverrideSteps As B4XView
 	Private ProgressBar1 As B4XProgressBar
 	Public dailyTarget As Int
 	Public HistoryPage As PageHistory
@@ -37,6 +38,8 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 	Root = Root1
 	Root.LoadLayout("MainPage")
 	B4XPages.SetTitle(Me, "MySteps")
+	
+	StyleReportButton
 	
 	' Initialize and register the secondary page
 	HistoryPage.Initialize
@@ -88,6 +91,17 @@ Private Sub B4XPage_KeyPress (KeyCode As Int) As Boolean 'ignore
 	End Select
 End Sub
 #End If
+
+Private Sub StyleReportButton
+	' 1. Apply rounded corners (16dip), modern accent color (#38B8FF), and white text
+	btnShowReport.SetColorAndBorder(xui.Color_RGB(56, 184, 255), 0, 0, 16dip)
+	btnShowReport.TextColor = xui.Color_White
+    
+	' 2. Use CSBuilder for bold text with an embedded icon
+	Dim cs As CSBuilder
+	cs.Initialize.Bold.Size(15).Append("📊  View History & Reports").PopAll
+	btnShowReport.Text = cs
+End Sub
 
 ' Called from StepService or local UI refresh
 Public Sub UpdateStepDisplay (steps As Int)
