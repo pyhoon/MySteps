@@ -68,7 +68,7 @@ End Sub
 Private Sub B4XPage_Appear
 	' Load current steps from central Map settings
 	Dim m As Map = GetSettings
-	Dim stepsToday As Int = m.Get("steps_today")
+	Dim stepsToday As Int = m.GetDefault("steps_today", 0)
 	UpdateStepDisplay(stepsToday)
 End Sub
 
@@ -105,7 +105,7 @@ End Sub
 
 ' Called from StepService or local UI refresh
 Public Sub UpdateStepDisplay (steps As Int)
-	lblSteps.Text = "Steps Today: " & NumberFormat(steps, 0, 0)
+	lblSteps.Text = "My Steps Today: " & NumberFormat(steps, 0, 0)
     
     ' Calculate progress percentage
     Dim progress As Float = steps / dailyTarget
@@ -131,7 +131,7 @@ Public Sub SetDailyTarget (newTarget As Int)
         lblDailyTarget.Text = "Daily target " & NumberFormat(newTarget, 0, 0) & " steps"
     End If
     
-	Dim stepsToday As Int = m.Get("steps_today")
+	Dim stepsToday As Int = m.GetDefault("steps_today", 0)
     UpdateStepDisplay(stepsToday)
 End Sub
 
@@ -162,7 +162,7 @@ End Sub
 
 ' Load or initialize settings Map
 Private Sub GetSettings As Map
-	Return kvs.GetDefault("app_settings", CreateMap("target": 10000, "notified_date": "", "day_start": -1, "last_date": ""))
+    Return kvs.GetDefault("app_settings", CreateMap("target": 10000, "notified_date": "", "day_start": -1, "last_date": "", "steps_today": 0))
 End Sub
 
 Private Sub SaveSettings (m As Map)
