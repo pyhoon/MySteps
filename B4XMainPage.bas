@@ -23,7 +23,8 @@ Sub Class_Globals
 	Private lblDailyTarget As B4XView
 	Private btnOverrideSteps As Button
 	Private ProgressBar1 As B4XProgressBar
-	Private dailyTarget As Int
+	Public dailyTarget As Int
+	Public HistoryPage As PageHistory
 End Sub
 
 Public Sub Initialize
@@ -36,6 +37,10 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 	Root = Root1
 	Root.LoadLayout("MainPage")
 	B4XPages.SetTitle(Me, "MySteps")
+	
+	' Initialize and register the secondary page
+	HistoryPage.Initialize
+	B4XPages.AddPage("PageHistory", HistoryPage)
 	
 	' REMINDER: Don't cheat your wife! Remember to Hide this button!
 	'btnOverrideSteps.Visible = True
@@ -156,103 +161,30 @@ Private Sub btnOverrideSteps_Click
 End Sub
 
 Private Sub btnShowReport_Click
-	ShowStepReport
+	'ShowStepReport
+	' Navigate to the registered page ID
+	B4XPages.ShowPage("PageHistory")
 End Sub
 
 ' Generates and displays weekly and monthly step performance
-Private Sub ShowStepReport
-	Dim weeklyStats As Map = GetHistoryStats(7)
-	Dim monthlyStats As Map = GetHistoryStats(30)
-    
-	Dim sb As StringBuilder
-	sb.Initialize
-    
-	sb.Append("📊 7-DAY SUMMARY (WEEKLY)").Append(CRLF)
-	sb.Append("• Total Steps: ").Append(NumberFormat(weeklyStats.Get("total"), 0, 0)).Append(CRLF)
-	sb.Append("• Daily Average: ").Append(NumberFormat(weeklyStats.Get("avg"), 0, 0)).Append(CRLF)
-	sb.Append("• Peak Day: ").Append(NumberFormat(weeklyStats.Get("max"), 0, 0)).Append(" steps").Append(CRLF)
-	sb.Append("• Days Logged: ").Append(weeklyStats.Get("days")).Append(" / 7").Append(CRLF).Append(CRLF)
-    
-	sb.Append("📅 30-DAY SUMMARY (MONTHLY)").Append(CRLF)
-	sb.Append("• Total Steps: ").Append(NumberFormat(monthlyStats.Get("total"), 0, 0)).Append(CRLF)
-	sb.Append("• Daily Average: ").Append(NumberFormat(monthlyStats.Get("avg"), 0, 0)).Append(CRLF)
-	sb.Append("• Peak Day: ").Append(NumberFormat(monthlyStats.Get("max"), 0, 0)).Append(" steps").Append(CRLF)
-	sb.Append("• Days Logged: ").Append(monthlyStats.Get("days")).Append(" / 30")
-    
-	xui.MsgboxAsync(sb.ToString, "Activity History & Performance")
-End Sub
-
-' Returns a Map with summary stats for the last N days
-Public Sub GetHistoryStats (daysCount As Int) As Map
-	Dim history As Map = kvs.GetDefault("step_history", CreateMap())
-	Dim totalSteps As Long = 0
-	Dim daysLogged As Int = 0
-	Dim maxSteps As Int = 0
-    
-	Dim todayStr As String = DateTime.Date(DateTime.Now)
-	Dim m As Map = GetSettings
-	Dim currentTodaySteps As Int = m.GetDefault("steps_today", 0)
-    
-	Dim pd As Period
-	For i = 0 To daysCount - 1
-		pd.Days = -i
-		Dim targetDate As String = DateTime.Date(DateUtils.AddPeriod(DateTime.Now, pd))
-        
-		Dim count As Int = 0
-		If targetDate = todayStr Then
-			count = currentTodaySteps
-		Else If history.ContainsKey(targetDate) Then
-			count = history.Get(targetDate)
-		End If
-        
-		If count > 0 Or history.ContainsKey(targetDate) Or targetDate = todayStr Then
-			totalSteps = totalSteps + count
-			daysLogged = daysLogged + 1
-			If count > maxSteps Then maxSteps = count
-		End If
-	Next
-    
-	Dim avgSteps As Int = 0
-	If daysLogged > 0 Then avgSteps = totalSteps / daysLogged
-    
-	Return CreateMap("total": totalSteps, "avg": avgSteps, "max": maxSteps, "days": daysLogged)
-End Sub
-
-Public Sub DrawWeeklyChart (pnlChart As B4XView)
-	Dim cvsChart As B4XCanvas
-	cvsChart.Initialize(pnlChart)
-	cvsChart.ClearRect(cvsChart.TargetRect)
-    
-	Dim history As Map = kvs.GetDefault("step_history", CreateMap())
-	Dim barWidth As Float = (pnlChart.Width - 40dip) / 7
-	Dim maxHeight As Float = pnlChart.Height - 30dip
-    
-	Dim pd As Period
-	For i = 6 To 0 Step -1
-		pd.Days = -i
-		Dim tickDate As String = DateTime.Date(DateUtils.AddPeriod(DateTime.Now, pd))
-		Dim daySteps As Int = history.GetDefault(tickDate, 0)
-        
-		' If checking today, grab current active session steps
-		If tickDate = DateTime.Date(DateTime.Now) Then
-			Dim m As Map = kvs.GetDefault("app_settings", CreateMap())
-			daySteps = m.GetDefault("steps_today", 0)
-		End If
-        
-		' Calculate Bar Height relative to target
-		Dim barHeight As Float = (daySteps / (dailyTarget * 1.2)) * maxHeight
-		If barHeight > maxHeight Then barHeight = maxHeight
-        
-		Dim x As Float = 20dip + (6 - i) * barWidth
-		Dim y As Float = pnlChart.Height - 20dip - barHeight
-        
-		' Bar color: Green if target met, Blue if under
-		Dim barColor As Int = xui.Color_RGB(56, 184, 255)
-		If daySteps >= dailyTarget Then barColor = xui.Color_RGB(76, 175, 80)
-        
-		' Draw Bar
-		cvsChart.DrawLine(x + barWidth / 2, pnlChart.Height - 20dip, x + barWidth / 2, y, barColor, barWidth - 6dip)
-	Next
-    
-	cvsChart.Invalidate
-End Sub
+'Private Sub ShowStepReport
+'	Dim weeklyStats As Map = GetHistoryStats(7)
+'	Dim monthlyStats As Map = GetHistoryStats(30)
+'    
+'	Dim sb As StringBuilder
+'	sb.Initialize
+'    
+'	sb.Append("📊 7-DAY SUMMARY (WEEKLY)").Append(CRLF)
+'	sb.Append("• Total Steps: ").Append(NumberFormat(weeklyStats.Get("total"), 0, 0)).Append(CRLF)
+'	sb.Append("• Daily Average: ").Append(NumberFormat(weeklyStats.Get("avg"), 0, 0)).Append(CRLF)
+'	sb.Append("• Peak Day: ").Append(NumberFormat(weeklyStats.Get("max"), 0, 0)).Append(" steps").Append(CRLF)
+'	sb.Append("• Days Logged: ").Append(weeklyStats.Get("days")).Append(" / 7").Append(CRLF).Append(CRLF)
+'    
+'	sb.Append("📅 30-DAY SUMMARY (MONTHLY)").Append(CRLF)
+'	sb.Append("• Total Steps: ").Append(NumberFormat(monthlyStats.Get("total"), 0, 0)).Append(CRLF)
+'	sb.Append("• Daily Average: ").Append(NumberFormat(monthlyStats.Get("avg"), 0, 0)).Append(CRLF)
+'	sb.Append("• Peak Day: ").Append(NumberFormat(monthlyStats.Get("max"), 0, 0)).Append(" steps").Append(CRLF)
+'	sb.Append("• Days Logged: ").Append(monthlyStats.Get("days")).Append(" / 30")
+'    
+'	xui.MsgboxAsync(sb.ToString, "Activity History & Performance")
+'End Sub
