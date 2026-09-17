@@ -16,6 +16,6 @@ ModuleClosedNodes2=
 ModuleClosedNodes3=
 ModuleClosedNodes4=
 ModuleClosedNodes5=
-NavigationStack=PageHistory,GetSettings,27,0,PageHistory,B4XPage_Appear,23,0,PageHistory,B4XPage_Created,17,0,PageHistory,Class_Globals,4,0,B4XMainPage,Class_Globals,18,0,B4XMainPage,B4XPage_Created,32,0,Visual Designer,PageHistory.bal,-100,6,PageHistory,RenderHistoryView,41,0,PageHistory,DrawWeeklyChart,170,1,PageHistory,GetHistoryStats,99,0
+NavigationStack=PageHistory,B4XPage_Created,22,0,StepService,GetSettings,117,0,PageHistory,Class_Globals,9,0,PageHistory,btn30Days_Click,40,0,PageHistory,RenderHistoryView,93,2,PageHistory,GetHistoryStats,363,0,PageHistory,DrawChart,538,0,B4XMainPage,B4XPage_Created,35,0,Visual Designer,PageHistory.bal,-100,6,B4XMainPage,Class_Globals,12,0
 SelectedBuild=0
 VisibleModules=1,5,3
