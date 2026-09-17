@@ -25,7 +25,7 @@ Version=14
 'Product: MySteps
 'Version: 1.00
 'Platform: B4A
-'License: Unlicensed
+'License: MIT License
 'Developer: Aeric Poon
 #Region  Project Attributes
 	#ApplicationLabel: MySteps
