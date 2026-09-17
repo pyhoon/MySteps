@@ -86,7 +86,7 @@ End Sub
 
 ' Called from StepService or local UI refresh
 Public Sub UpdateStepDisplay (steps As Int)
-    lblSteps.Text = "Steps Today: " & steps
+	lblSteps.Text = "Steps Today: " & NumberFormat(steps, 0, 0)
     
     ' Calculate progress percentage
     Dim progress As Float = steps / dailyTarget
@@ -97,7 +97,7 @@ Public Sub UpdateStepDisplay (steps As Int)
     
     ' Update target display label
     Dim pct As Int = Floor((steps / dailyTarget) * 100)
-	lblTarget.Text = steps & " / " & NumberFormat(dailyTarget, 0, 0) & " steps (" & pct & "%)"
+	lblTarget.Text = NumberFormat(steps, 0, 0) & " / " & NumberFormat(dailyTarget, 0, 0) & " steps (" & pct & "%)"
 End Sub
 
 Public Sub SetDailyTarget (newTarget As Int)
