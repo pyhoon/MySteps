@@ -1,8 +1,10 @@
 ﻿Build1=Default,com.puterise.mysteps
 File1=MainPage.bal
-File2=smiley.png
+File2=PageHistory.bal
+File3=smiley.png
 FileGroup1=Default Group
 FileGroup2=Default Group
+FileGroup3=Default Group
 Group=Default Group
 Library1=b4xpages
 Library2=core
@@ -15,11 +17,12 @@ Library8=xui views
 ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: https://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="21" android:targetSdkVersion="36"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~CreateResourceFromFile(Macro, Themes.LightTheme)~\n~'End of default text.~\n~~\n~'AddPermission(android.permission.ACTIVITY_RECOGNITION)~\n~~\n~AddPermission(android.permission.FOREGROUND_SERVICE)~\n~AddPermission(android.permission.FOREGROUND_SERVICE_HEALTH) ' Required for Android 14+ (API 34+)~\n~AddPermission(android.permission.ACTIVITY_RECOGNITION)~\n~AddPermission(android.permission.RECEIVE_BOOT_COMPLETED)~\n~' Fix: Explicitly declare the foreground service type for StepService~\n~SetServiceAttribute(StepService, android:foregroundServiceType, "health")
 Module1=|relative|..\B4XMainPage
 Module2=|relative|..\B4XProgressBar
-Module3=StepReceiver
-Module4=StepService
-NumberOfFiles=2
+Module3=|relative|..\PageHistory
+Module4=StepReceiver
+Module5=StepService
+NumberOfFiles=3
 NumberOfLibraries=8
-NumberOfModules=4
+NumberOfModules=5
 Version=14
 @EndOfDesignText@
 'Product: MySteps
@@ -34,7 +37,7 @@ Version=14
 	'SupportedOrientations possible values: unspecified, landscape or portrait.
 	#SupportedOrientations: portrait
 	#CanInstallToExternalStorage: False
-	'#BridgeLogger: True
+	#BridgeLogger: True
 #End Region
 
 #Region  Activity Attributes
