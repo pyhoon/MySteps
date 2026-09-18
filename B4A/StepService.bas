@@ -56,22 +56,25 @@ Private Sub Sensor_SensorChanged (Values() As Float)
 	Dim todayDate As String = DateTime.Date(DateTime.Now)
 	Dim m As Map = GetSettings
     
-	Dim dayStart As Int = m.Get("day_start")
-	Dim lastDate As String = m.Get("last_date")
+	Dim dayStart As Int = m.GetDefault("day_start", -1)
+	Dim lastDate As String = m.GetDefault("last_date", "")
     
 	' Reset on midnight or initial run
 	If todayDate <> lastDate Or dayStart = -1 Then
-		' Save previous day's total before resetting
-		If lastDate <> "" Then
+		' 1. Archive previous day's steps into KVS step_history
+		If lastDate <> "" And lastDate <> todayDate Then
 			Dim history As Map = kvs.GetDefault("step_history", CreateMap())
 			Dim yesterdaySteps As Int = m.GetDefault("steps_today", 0)
 			history.Put(lastDate, yesterdaySteps)
 			kvs.Put("step_history", history)
 		End If
-
+		
+		' 2. Reset baseline and steps count for the new day
 		dayStart = lastTotalSteps
 		m.Put("day_start", dayStart)
 		m.Put("last_date", todayDate)
+		m.Put("steps_today", 0)
+		SaveSettings(m)
 	End If
 
 	' Reset on device reboot
@@ -79,15 +82,15 @@ Private Sub Sensor_SensorChanged (Values() As Float)
 		dayStart = 0
 		m.Put("day_start", dayStart)
 	End If
-    
-	' Check for Daily Goal Achievement
-	Dim target As Int = m.Get("target")
-	Dim notifiedDate As String = m.Get("notified_date")
 	
 	' Calculate & Save Steps
 	Dim stepsToday As Int = lastTotalSteps - dayStart
 	m.Put("steps_today", stepsToday)
 	SaveSettings(m)
+	
+	' Check for Daily Goal Achievement
+	Dim target As Int = m.GetDefault("target", 10000)
+	Dim notifiedDate As String = m.GetDefault("notified_date", "")
 	
 	If stepsToday >= target And notifiedDate <> todayDate Then
 		m.Put("notified_date", todayDate)
