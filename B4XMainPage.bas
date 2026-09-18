@@ -50,7 +50,7 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 	
 	' Load target from central Map settings
 	Dim m As Map = GetSettings
-	dailyTarget = m.Get("target")
+	dailyTarget = m.GetDefault("target", 10000)
 
 	' Force the daily target for testing
 	SetDailyTarget(10000)
