@@ -104,18 +104,23 @@ Public Sub GetHistoryStats (daysCount As Int) As Map
     
 	Dim todayStr As String = DateTime.Date(DateTime.Now)
 	Dim m As Map = GetSettings
-	Dim currentTodaySteps As Int = m.GetDefault("steps_today", 0)
-    
+	'Dim currentTodaySteps As Int = m.GetDefault("steps_today", 0)
+	Dim lastDateSaved As String = m.GetDefault("last_date", "")
+	
 	Dim pd As Period
 	For i = 0 To daysCount - 1
 		pd.Days = -i
 		Dim targetDate As String = DateTime.Date(DateUtils.AddPeriod(DateTime.Now, pd))
         
 		Dim count As Int = 0
-		If targetDate = todayStr Then
-			count = currentTodaySteps
+		If targetDate = todayStr And lastDateSaved = todayStr Then
+			'count = currentTodaySteps
+			count = m.GetDefault("steps_today", 0)
 		Else If history.ContainsKey(targetDate) Then
 			count = history.Get(targetDate)
+		Else If targetDate = lastDateSaved And lastDateSaved <> todayStr Then
+			' Unarchived steps from yesterday before first post-midnight sensor event
+			count = m.GetDefault("steps_today", 0)
 		End If
         
 		If count > 0 Or history.ContainsKey(targetDate) Or targetDate = todayStr Then
@@ -143,7 +148,10 @@ Public Sub DrawChart (pnlCanvas As B4XView, daysCount As Int, dailyTarget As Int
 	cvsChart.DrawRect(rectChart, xui.Color_RGB(220, 220, 220), False, 1dip)
     
 	Dim history As Map = kvs.GetDefault("step_history", CreateMap())
-    
+	Dim m As Map = GetSettings
+	Dim lastDateSaved As String = m.GetDefault("last_date", "")
+	Dim todayStr As String = DateTime.Date(DateTime.Now)
+	
 	' Adjust bottom padding dynamically
 	Dim topPadding As Float = 25dip
 	Dim bottomPadding As Float = IIf(daysCount = 7, 48dip, 30dip)
@@ -159,41 +167,68 @@ Public Sub DrawChart (pnlCanvas As B4XView, daysCount As Int, dailyTarget As Int
     
 	Dim dayNames() As String = Array As String("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
     
-	Dim originalDateFormat As String = DateTime.DateFormat
-	DateTime.DateFormat = "dd/MM"
-    
-	' Scan for Peak Day step count (to highlight in 30-day mode)
+	'Dim originalDateFormat As String = DateTime.DateFormat
+	'DateTime.DateFormat = "dd/MM"
+	
+	' 2. Scan Peak Day for 30-day mode highlighting
 	Dim maxStepInPeriod As Int = 0
 	Dim pdScan As Period
 	For k = daysCount - 1 To 0 Step -1
 		pdScan.Days = -k
 		Dim scanDate As String = DateTime.Date(DateUtils.AddPeriod(DateTime.Now, pdScan))
 		Dim scanCount As Int = history.GetDefault(scanDate, 0)
-		If k = 0 Then
-			Dim mSettings As Map = GetSettings
-			scanCount = mSettings.GetDefault("steps_today", 0)
-		End If
+		'If k = 0 Then
+		'	Dim mSettings As Map = GetSettings
+		'	scanCount = mSettings.GetDefault("steps_today", 0)
+		'End If
+		'If scanCount > maxStepInPeriod Then maxStepInPeriod = scanCount
+		If scanDate = todayStr Then scanCount = m.GetDefault("steps_today", 0)
 		If scanCount > maxStepInPeriod Then maxStepInPeriod = scanCount
 	Next
-    
+	
 	Dim pd As Period
 	For i = daysCount - 1 To 0 Step -1
 		pd.Days = -i
         
 		Dim targetTicks As Long = DateUtils.AddPeriod(DateTime.Now, pd)
-		Dim dateLabel As String = DateTime.Date(targetTicks)
+		
+		' tickDate uses standard system date format to match KVS keys
 		Dim tickDate As String = DateTime.Date(targetTicks)
         
+		' dateLabel extracts dd/MM directly without modifying DateTime.DateFormat
+		'Dim dateLabel As String = DateTime.Date(targetTicks)
+		Dim dayNum As Int = DateTime.GetDayOfMonth(targetTicks)
+		Dim monthNum As Int = DateTime.GetMonth(targetTicks)
+		Dim dateLabel As String = NumberFormat(dayNum, 2, 0) & "/" & NumberFormat(monthNum, 2, 0)
+		
 		Dim dayOfWeek As Int = DateTime.GetDayOfWeek(targetTicks) ' 1 = Sun, 7 = Sat
 		Dim dayName As String = dayNames(dayOfWeek - 1)
 		Dim isWeekend As Boolean = (dayOfWeek = 1 Or dayOfWeek = 7)
         
-		Dim daySteps As Int = history.GetDefault(tickDate, 0)
-		If i = 0 Then
-			Dim m As Map = GetSettings
+		'Dim daySteps As Int = history.GetDefault(tickDate, 0)
+		'Dim daySteps As Int = 0
+		'If tickDate = todayStr And lastDateSaved = tickDate Then
+		'	daySteps = m.GetDefault("steps_today", 0)
+		'Else If history.ContainsKey(tickDate) Then
+		'	daySteps = history.Get(tickDate)
+		'Else If tickDate = lastDateSaved Then
+		'	daySteps = m.GetDefault("steps_today", 0)
+		'End If
+		'If i = 0 Then
+		'	Dim m As Map = GetSettings
+		'	daySteps = m.GetDefault("steps_today", 0)
+		'End If
+		
+		' 3. Correct Date & History Lookup
+		Dim daySteps As Int = 0
+		If tickDate = todayStr Then
+			daySteps = m.GetDefault("steps_today", 0)
+		Else If history.ContainsKey(tickDate) Then
+			daySteps = history.Get(tickDate)
+		Else If tickDate = lastDateSaved Then
 			daySteps = m.GetDefault("steps_today", 0)
 		End If
-        
+		
 		' Bar Height Calculation
 		Dim barHeight As Float = (daySteps / (dailyTarget * 1.2)) * maxHeight
 		If barHeight > maxHeight Then barHeight = maxHeight
@@ -206,7 +241,7 @@ Public Sub DrawChart (pnlCanvas As B4XView, daysCount As Int, dailyTarget As Int
 		Dim barColor As Int = xui.Color_RGB(56, 184, 255)
 		If daySteps >= dailyTarget Then barColor = xui.Color_RGB(76, 175, 80)
         
-		' 2. Draw Step Bar
+		' 4. Draw Step Bar
 		If daySteps > 0 Then
 			Dim strokeThickness As Float = Max(1dip, barWidth - IIf(daysCount = 7, 8dip, 2dip))
 			cvsChart.DrawLine(centerX, baselineY, centerX, topY, barColor, strokeThickness)
@@ -215,7 +250,7 @@ Public Sub DrawChart (pnlCanvas As B4XView, daysCount As Int, dailyTarget As Int
 		' Text Color (Red for Weekends)
 		Dim labelColor As Int = IIf(isWeekend, xui.Color_RGB(239, 68, 68), xui.Color_RGB(100, 100, 100))
         
-		' 3. Render Bottom Labels
+		' 5. Render Bottom Labels
 		If daysCount = 7 Then
 			' 7-Day Mode: Full details (dd/MM + Day Name + Red Weekend text)
 			cvsChart.DrawText(dateLabel, centerX, pnlCanvas.Height - 26dip, fntLabel, labelColor, "CENTER")
@@ -227,7 +262,7 @@ Public Sub DrawChart (pnlCanvas As B4XView, daysCount As Int, dailyTarget As Int
 			End If
 		End If
         
-		' 4. Render Step Count Above Bar
+		' 6. Render Step Count Above Bar
 		If daySteps > 0 Then
 			Dim stepText As String = IIf(daySteps >= 1000, NumberFormat(daySteps / 1000, 0, 1) & "k", NumberFormat(daySteps, 0, 0))
             
@@ -243,6 +278,6 @@ Public Sub DrawChart (pnlCanvas As B4XView, daysCount As Int, dailyTarget As Int
 		End If
 	Next
     
-	DateTime.DateFormat = originalDateFormat
+	'DateTime.DateFormat = originalDateFormat
 	cvsChart.Invalidate
 End Sub
