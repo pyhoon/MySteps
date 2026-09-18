@@ -1,4 +1,6 @@
 # MySteps
 Steps Counter written in B4A
 
-![Preview](Preview.png)
+![Preview1](Preview1.jpg)
+
+![Preview2](Preview2.jpg)
